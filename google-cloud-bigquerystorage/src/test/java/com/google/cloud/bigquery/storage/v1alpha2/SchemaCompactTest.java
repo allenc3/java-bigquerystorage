@@ -39,6 +39,7 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
+
 @RunWith(JUnit4.class)
 public class SchemaCompactTest {
   @Mock private BigQuery mockBigquery;

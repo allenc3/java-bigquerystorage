@@ -36,6 +36,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashSet;
 import java.util.Arrays;
+import java.util.List;
 
 /**
  * A class that checks the schema compatibility between user schema in proto descriptor and Bigquery
