@@ -39,7 +39,6 @@ import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 
-
 @RunWith(JUnit4.class)
 public class SchemaCompactTest {
   @Mock private BigQuery mockBigquery;
@@ -435,40 +434,58 @@ public class SchemaCompactTest {
     verify(mockBigqueryTable, times(16)).getDefinition();
   }
 
-  // @Test
-  // public void testNestingGood() {
-  //   SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
-  //   assertTrue(compact.isSupported(SupportedNestingLvl1.getDescriptor()));
-  // }
+  @Test
+  public void testNestingGood() {
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    assertTrue(compact.isSupported(SupportedNestingLvl1.getDescriptor()));
+    assertTrue(compact.isSupported(SupportedNestingStacked.getDescriptor()));
+  }
 
   @Test
-  public void testNestingOneLayer() {
+  public void testNestingRecursive() {
     SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
-    Descriptors.Descriptor testNesting = NonSupportedNestingLvl1.getDescriptor();
+    Descriptors.Descriptor testNesting = NonSupportedNestingRecursive.getDescriptor();
     try {
       compact.isSupported(testNesting);
       fail("Should not be supported: field contains invalid nesting");
     } catch (IllegalArgumentException expected) {
       assertEquals(
-        "User schema " + testNesting.getFullName() + " is not supported: contains recursively nested types.",
-        expected.getMessage()
-      );
+          "User schema "
+              + testNesting.getFullName()
+              + " is not supported: contains ill-formatted nesting messages.",
+          expected.getMessage());
     }
   }
 
   @Test
-  public void testNestingTwoLayers() {
+  public void testNestingContainsRecursive() {
     SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
-    Descriptors.Descriptor testNesting = NonSupportedNestingLvl2.getDescriptor();
+    Descriptors.Descriptor testNesting = NonSupportedNestingContainsRecursive.getDescriptor();
     try {
       compact.isSupported(testNesting);
       fail("Should not be supported: field contains invalid nesting");
     } catch (IllegalArgumentException expected) {
       assertEquals(
-        "User schema " + testNesting.getFullName() + " is not supported: contains recursively nested types.",
-        expected.getMessage()
-      );
+          "User schema "
+              + testNesting.getFullName()
+              + " is not supported: contains ill-formatted nesting messages.",
+          expected.getMessage());
     }
   }
 
+  @Test
+  public void testNestingRecursiveLimit() {
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    Descriptors.Descriptor testNesting = NonSupportedNestingLvl0.getDescriptor();
+    try {
+      compact.isSupported(testNesting);
+      fail("Should not be supported: field contains invalid nesting");
+    } catch (IllegalArgumentException expected) {
+      assertEquals(
+          "User schema "
+              + testNesting.getFullName()
+              + " is not supported: contains ill-formatted nesting messages.",
+          expected.getMessage());
+    }
+  }
 }

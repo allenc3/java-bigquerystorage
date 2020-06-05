@@ -24,7 +24,6 @@ import com.google.cloud.bigquery.Table;
 import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.testing.RemoteBigQueryHelper;
 import com.google.common.annotations.VisibleForTesting;
-import com.google.cloud.bigquery.storage.test.TypeAnnotationProto;
 import com.google.protobuf.Descriptors;
 import com.google.zetasql.ProtoType;
 import com.google.zetasql.TypeAnnotationProto;
@@ -36,7 +35,10 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.HashSet;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.List;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * A class that checks the schema compatibility between user schema in proto descriptor and Bigquery
