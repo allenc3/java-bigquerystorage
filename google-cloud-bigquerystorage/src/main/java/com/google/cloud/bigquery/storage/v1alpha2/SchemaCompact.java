@@ -25,6 +25,7 @@ import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.testing.RemoteBigQueryHelper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
+import com.google.zetasql.TypeAnnotationProto;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -157,7 +158,8 @@ public class SchemaCompact {
       throws IllegalArgumentException {
 
     if (allMessageTypes.size() > 15) {
-      return false;
+      throw new IllegalArgumentException(
+          "User schema " + message.getFullName() + " is not supported: contains nested messages of more than 15 levels.");
     }
 
     if (allMessageTypes.contains(message)) {
