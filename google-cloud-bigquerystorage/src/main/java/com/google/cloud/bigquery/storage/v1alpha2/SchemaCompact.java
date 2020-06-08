@@ -511,6 +511,30 @@ public class SchemaCompact {
                                          " and the BQ table schema");
       }
 
+      for (Field field : BQFields) {
+        String fieldName = field.getName().toLowerCase();
+        Descriptors.FieldDescriptor protoField = null;
+        if (protoFieldMap.containsKey(fieldName)) {
+          protoField = protoFieldMap.get(fieldName);
+        }
+
+        if (protoField == null && field.getMode() == Field.Mode.REQUIRED) {
+          throw new IllegalArgumentException("The required Big Query field " + field.getName() + " is missing in the proto schema.");
+        }
+
+        if (protoField == null) {
+          continue;
+        }
+        isProtoFieldModeCompatibleWithBQFieldMode(protoField, field);
+        matchedFields++;
+      }
+
+      if (matchedFields == 0 && topLevel) {
+        throw new IllegalArgumentException ("There is no matching fields found for the proto schema " +
+                                         protoSchema.getName() +
+                                         " and the table schema " +
+                                         BQSchema);
+      }
       return true;
   }
 
