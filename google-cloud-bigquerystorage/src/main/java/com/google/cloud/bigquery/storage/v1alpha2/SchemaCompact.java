@@ -158,8 +158,7 @@ public class SchemaCompact {
       throws IllegalArgumentException {
 
     if (allMessageTypes.size() > 15) {
-      throw new IllegalArgumentException(
-          "User schema " + message.getFullName() + " is not supported: contains nested messages of more than 15 levels.");
+      return false;
     }
 
     if (allMessageTypes.contains(message)) {

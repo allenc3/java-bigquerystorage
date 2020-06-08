@@ -452,7 +452,7 @@ public class SchemaCompactTest {
       assertEquals(
           "User schema "
               + testNesting.getFullName()
-              + " is not supported: contains ill-formatted nesting messages.",
+              + " is not supported: contains recursively nested messages.",
           expected.getMessage());
     }
   }
@@ -466,9 +466,9 @@ public class SchemaCompactTest {
       fail("Should not be supported: field contains invalid nesting");
     } catch (IllegalArgumentException expected) {
       assertEquals(
-          "User schema "
-              + testNesting.getFullName()
-              + " is not supported: contains ill-formatted nesting messages.",
+          "User schema " +
+          NonSupportedNestingRecursive.getDescriptor().getFullName() +
+          " is not supported: contains recursively nested messages.",
           expected.getMessage());
     }
   }
