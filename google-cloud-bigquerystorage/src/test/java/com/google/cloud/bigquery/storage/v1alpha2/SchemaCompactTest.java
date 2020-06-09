@@ -356,4 +356,81 @@ public class SchemaCompactTest {
     verify(mockBigquery, times(16)).getTable(any(TableId.class));
     verify(mockBigqueryTable, times(16)).getDefinition();
   }
+
+  @Test
+  public void testBQString() {
+    customizeSchema(Schema.of(Field.newBuilder("test_field_type", LegacySQLTypeName.STRING).setMode(Field.Mode.NULLABLE).build()));
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    HashSet<Descriptors.Descriptor> compatible = new HashSet<>(Arrays.asList(
+      StringType.getDescriptor(),
+      EnumType.getDescriptor()));
+
+    for (Descriptors.Descriptor descriptor : type_descriptors) {
+      if (compatible.contains(descriptor)) {
+        assertTrue(compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false));
+      } else {
+          try {
+            compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false);
+            fail("Should fail: Proto schema type should not match BQ String.");
+          } catch (IllegalArgumentException expected) {
+            assertEquals(
+                  "The proto field test_field_type does not have a matching type with the big query field test_field_type.",
+                  expected.getMessage());
+          }
+      }
+    }
+    verify(mockBigquery, times(16)).getTable(any(TableId.class));
+    verify(mockBigqueryTable, times(16)).getDefinition();
+  }
+
+  @Test
+  public void testBQBytes() {
+    customizeSchema(Schema.of(Field.newBuilder("test_field_type", LegacySQLTypeName.BYTES).setMode(Field.Mode.NULLABLE).build()));
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    HashSet<Descriptors.Descriptor> compatible = new HashSet<>(Arrays.asList(
+      BytesType.getDescriptor()));
+
+    for (Descriptors.Descriptor descriptor : type_descriptors) {
+      if (compatible.contains(descriptor)) {
+        assertTrue(compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false));
+      } else {
+          try {
+            compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false);
+            fail("Should fail: Proto schema type should not match BQ Bytes.");
+          } catch (IllegalArgumentException expected) {
+            assertEquals(
+                  "The proto field test_field_type does not have a matching type with the big query field test_field_type.",
+                  expected.getMessage());
+          }
+      }
+    }
+    verify(mockBigquery, times(16)).getTable(any(TableId.class));
+    verify(mockBigqueryTable, times(16)).getDefinition();
+  }
+
+  @Test
+  public void testBQFloat() {
+    customizeSchema(Schema.of(Field.newBuilder("test_field_type", LegacySQLTypeName.FLOAT).setMode(Field.Mode.NULLABLE).build()));
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    HashSet<Descriptors.Descriptor> compatible = new HashSet<>(Arrays.asList(
+      FloatType.getDescriptor(),
+      DoubleType.getDescriptor()));
+
+    for (Descriptors.Descriptor descriptor : type_descriptors) {
+      if (compatible.contains(descriptor)) {
+        assertTrue(compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false));
+      } else {
+          try {
+            compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false);
+            fail("Should fail: Proto schema type should not match BQ Float.");
+          } catch (IllegalArgumentException expected) {
+            assertEquals(
+                  "The proto field test_field_type does not have a matching type with the big query field test_field_type.",
+                  expected.getMessage());
+          }
+      }
+    }
+    verify(mockBigquery, times(16)).getTable(any(TableId.class));
+    verify(mockBigqueryTable, times(16)).getDefinition();
+  }
 }

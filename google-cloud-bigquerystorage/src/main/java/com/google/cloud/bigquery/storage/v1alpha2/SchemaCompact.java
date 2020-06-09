@@ -227,18 +227,14 @@ public class SchemaCompact {
   public static boolean isCompatibleWithBQInteger(
     Descriptors.FieldDescriptor.Type field, TypeAnnotationProto.FieldFormat.Format format) {
       if (field == Descriptors.FieldDescriptor.Type.INT64 ||
-          field == Descriptors.FieldDescriptor.Type.SFIXED64) {
-          return true;
-      }
-
-      if (field == Descriptors.FieldDescriptor.Type.INT32 ||
+          field == Descriptors.FieldDescriptor.Type.SFIXED64 ||
+          field == Descriptors.FieldDescriptor.Type.INT32 ||
           field == Descriptors.FieldDescriptor.Type.UINT32 ||
           field == Descriptors.FieldDescriptor.Type.FIXED32 ||
           field == Descriptors.FieldDescriptor.Type.SFIXED32 ||
           field == Descriptors.FieldDescriptor.Type.ENUM) {
           return true;
       }
-
       return false;
   }
 
@@ -247,7 +243,6 @@ public class SchemaCompact {
       if (field == Descriptors.FieldDescriptor.Type.FLOAT) {
           return true;
       }
-
       if (field == Descriptors.FieldDescriptor.Type.DOUBLE) {
           return true;
       }
@@ -274,10 +269,18 @@ public class SchemaCompact {
       return false;
   }
 
-  public static boolean isCompatibleWithBQStringAndBytes(
+  public static boolean isCompatibleWithBQBytes(
     Descriptors.FieldDescriptor.Type field, TypeAnnotationProto.FieldFormat.Format format) {
-      if (field == Descriptors.FieldDescriptor.Type.BYTES ||
-          field == Descriptors.FieldDescriptor.Type.STRING) {
+      if (field == Descriptors.FieldDescriptor.Type.BYTES) {
+        return true;
+      }
+      return false;
+  }
+
+  public static boolean isCompatibleWithBQString(
+    Descriptors.FieldDescriptor.Type field, TypeAnnotationProto.FieldFormat.Format format) {
+      if (field == Descriptors.FieldDescriptor.Type.STRING ||
+          field == Descriptors.FieldDescriptor.Type.ENUM) {
         return true;
       }
       return false;
@@ -425,13 +428,22 @@ public class SchemaCompact {
     LegacySQLTypeName BQType = BQField.getType();
     Descriptors.FieldDescriptor.Type protoType = protoField.getType();
     boolean match = false;
-    if (BQType == LegacySQLTypeName.BYTES || BQType == LegacySQLTypeName.STRING) {
-      match = isCompatibleWithBQStringAndBytes(protoType, protoAnnotation);
+    if (BQType == LegacySQLTypeName.BYTES) {
+      match = isCompatibleWithBQBytes(protoType, protoAnnotation);
+    }
+
+    else if(BQType == LegacySQLTypeName.STRING) {
+      match = isCompatibleWithBQString(protoType, protoAnnotation);
     }
 
     else if(BQType == LegacySQLTypeName.INTEGER) {
       match = isCompatibleWithBQInteger(protoType, protoAnnotation);
     }
+
+    else if(BQType == LegacySQLTypeName.FLOAT) {
+      match = isCompatibleWithBQFloat(protoType, protoAnnotation);
+    }
+
 
     if (!match) {
       throw new IllegalArgumentException("The proto field " +
