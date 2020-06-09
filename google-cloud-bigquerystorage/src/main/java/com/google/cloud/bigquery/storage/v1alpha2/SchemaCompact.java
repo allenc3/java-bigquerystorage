@@ -459,30 +459,6 @@ public class SchemaCompact {
     }
   }
 
-  private void protoFieldTypeIsCompatibleWithBQFieldType(
-    Descriptors.FieldDescriptor protoField, Field BQField)
-    throws IllegalArgumentException {
-
-    TypeAnnotationProto.FieldFormat.Format protoAnnotation = ProtoType.getFormatAnnotation(protoField);
-    LegacySQLTypeName BQType = BQField.getType();
-    Descriptors.FieldDescriptor.Type protoType = protoField.getType();
-    boolean match = false;
-    if (BQType == LegacySQLTypeName.BYTES || BQType == LegacySQLTypeName.STRING) {
-      match = isCompatibleWithBQStringAndBytes(protoType, protoAnnotation);
-    }
-
-    else if(BQType == LegacySQLTypeName.INTEGER) {
-      match = isCompatibleWithBQInteger(protoType, protoAnnotation);
-    }
-
-    if (!match) {
-      throw new IllegalArgumentException("The proto field " +
-                                          protoField.getName() +
-                                          " does not have a matching type with the big query field " +
-                                          BQField.getName() + ".");
-    }
-  }
-
   private boolean isProtoCompatibleWithBQImpl (
     Descriptors.Descriptor protoSchema, Schema BQSchema, boolean allowUnknownFields, boolean topLevel)
     throws IllegalArgumentException {
@@ -535,8 +511,8 @@ public class SchemaCompact {
                                          " and the BQ table schema");
       }
 
-      for (Field field : BQFields) {
-        String fieldName = field.getName().toLowerCase();
+      for (Field BQField : BQFields) {
+        String fieldName = BQField.getName().toLowerCase();
         Descriptors.FieldDescriptor protoField = null;
         if (protoFieldMap.containsKey(fieldName)) {
           protoField = protoFieldMap.get(fieldName);
