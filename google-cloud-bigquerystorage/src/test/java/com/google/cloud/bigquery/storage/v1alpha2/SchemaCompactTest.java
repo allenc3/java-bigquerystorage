@@ -530,25 +530,7 @@ public class SchemaCompactTest {
 
   @Test
   public void testProtoFieldOptionsRepeated() {
-    TableDefinition definition =
-        new TableDefinition() {
-          @Override
-          public Type getType() {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Schema getSchema() {
-            return Schema.of(Field.newBuilder("repeated_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.REPEATED).build());
-          }
-
-          @Override
-          public Builder toBuilder() {
-            return null;
-          }
-        };
-    when(mockBigqueryTable.getDefinition()).thenReturn(definition);
+    customizeSchema(Schema.of(Field.newBuilder("repeated_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.REPEATED).build()));
     SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
     assertTrue(compact.isProtoCompatibleWithBQ(ProtoRepeatedBQRepeated.getDescriptor(), "projects/p/datasets/d/tables/t", false));
 
@@ -576,25 +558,7 @@ public class SchemaCompactTest {
 
   @Test
   public void testProtoFieldOptionsRequired() {
-    TableDefinition definition =
-        new TableDefinition() {
-          @Override
-          public Type getType() {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Schema getSchema() {
-            return Schema.of(Field.newBuilder("required_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.REQUIRED).build());
-          }
-
-          @Override
-          public Builder toBuilder() {
-            return null;
-          }
-        };
-    when(mockBigqueryTable.getDefinition()).thenReturn(definition);
+    customizeSchema(Schema.of(Field.newBuilder("required_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.REQUIRED).build()));
     SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
     assertTrue(compact.isProtoCompatibleWithBQ(ProtoRequiredBQRequired.getDescriptor(), "projects/p/datasets/d/tables/t", false));
 
@@ -631,25 +595,7 @@ public class SchemaCompactTest {
 
   @Test
   public void testProtoFieldOptionsOptional() {
-    TableDefinition definition =
-        new TableDefinition() {
-          @Override
-          public Type getType() {
-            return null;
-          }
-
-          @Nullable
-          @Override
-          public Schema getSchema() {
-            return Schema.of(Field.newBuilder("optional_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.NULLABLE).build());
-          }
-
-          @Override
-          public Builder toBuilder() {
-            return null;
-          }
-        };
-    when(mockBigqueryTable.getDefinition()).thenReturn(definition);
+    customizeSchema(Schema.of(Field.newBuilder("optional_mode", LegacySQLTypeName.INTEGER).setMode(Field.Mode.NULLABLE).build()));
     SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
     assertTrue(compact.isProtoCompatibleWithBQ(ProtoOptionalBQOptional.getDescriptor(), "projects/p/datasets/d/tables/t", false));
     assertTrue(compact.isProtoCompatibleWithBQ(ProtoRequiredBQOptional.getDescriptor(), "projects/p/datasets/d/tables/t", false));
@@ -667,5 +613,34 @@ public class SchemaCompactTest {
     verify(mockBigqueryTable, times(3)).getDefinition();
   }
 
+  @Test
+  public void testBQInteger() {
+    customizeSchema(Schema.of(Field.newBuilder("test_field_type", LegacySQLTypeName.INTEGER).setMode(Field.Mode.NULLABLE).build()));
+    SchemaCompact compact = SchemaCompact.getInstance(mockBigquery);
+    HashSet<Descriptors.Descriptor> integerCompatible = new HashSet<>(Arrays.asList(
+      Int32Type.getDescriptor(),
+      Int64Type.getDescriptor(),
+      UInt32Type.getDescriptor(),
+      Fixed32Type.getDescriptor(),
+      SFixed32Type.getDescriptor(),
+      SFixed64Type.getDescriptor(),
+      EnumType.getDescriptor()));
 
+    for (Descriptors.Descriptor descriptor : type_descriptors) {
+      if (integerCompatible.contains(descriptor)) {
+        assertTrue(compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false));
+      } else {
+          try {
+            compact.isProtoCompatibleWithBQ(descriptor, "projects/p/datasets/d/tables/t", false);
+            fail("Should fail: Proto schema type should not match BQ integer.");
+          } catch (IllegalArgumentException expected) {
+            assertEquals(
+                  "The proto field test_field_type does not have a matching type with the big query field test_field_type.",
+                  expected.getMessage());
+          }
+      }
+    }
+    verify(mockBigquery, times(16)).getTable(any(TableId.class));
+    verify(mockBigqueryTable, times(16)).getDefinition();
+  }
 }

@@ -25,6 +25,7 @@ import com.google.cloud.bigquery.TableId;
 import com.google.cloud.bigquery.testing.RemoteBigQueryHelper;
 import com.google.common.annotations.VisibleForTesting;
 import com.google.protobuf.Descriptors;
+import com.google.zetasql.ProtoType;
 import com.google.zetasql.TypeAnnotationProto;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -457,16 +458,29 @@ public class SchemaCompact {
                                           BQField.getName() + ".");
     }
   }
-  private boolean isProtoFieldTypeCompatibleWithBQFieldType(
+
+  private void protoFieldTypeIsCompatibleWithBQFieldType(
     Descriptors.FieldDescriptor protoField, Field BQField)
     throws IllegalArgumentException {
 
-    // TypeAnnotationProto.FieldFormat.Format annotation = Prototype.getAnnotation
-    // switch(BQField.getType()) {
-    //   case INTEGER:
-    //     if
-    // }
-    return true;
+    TypeAnnotationProto.FieldFormat.Format protoAnnotation = ProtoType.getFormatAnnotation(protoField);
+    LegacySQLTypeName BQType = BQField.getType();
+    Descriptors.FieldDescriptor.Type protoType = protoField.getType();
+    boolean match = false;
+    if (BQType == LegacySQLTypeName.BYTES || BQType == LegacySQLTypeName.STRING) {
+      match = isCompatibleWithBQStringAndBytes(protoType, protoAnnotation);
+    }
+
+    else if(BQType == LegacySQLTypeName.INTEGER) {
+      match = isCompatibleWithBQInteger(protoType, protoAnnotation);
+    }
+
+    if (!match) {
+      throw new IllegalArgumentException("The proto field " +
+                                          protoField.getName() +
+                                          " does not have a matching type with the big query field " +
+                                          BQField.getName() + ".");
+    }
   }
 
   private boolean isProtoCompatibleWithBQImpl (
@@ -528,23 +542,25 @@ public class SchemaCompact {
           protoField = protoFieldMap.get(fieldName);
         }
 
-        if (protoField == null && field.getMode() == Field.Mode.REQUIRED) {
-          throw new IllegalArgumentException("The required Big Query field " + field.getName() + " is missing in the proto schema.");
+        if (protoField == null && BQField.getMode() == Field.Mode.REQUIRED) {
+          throw new IllegalArgumentException("The required Big Query field " + BQField.getName() + " is missing in the proto schema.");
         }
 
         if (protoField == null) {
           continue;
         }
-        isProtoFieldModeCompatibleWithBQFieldMode(protoField, field);
+
+        protoFieldModeIsCompatibleWithBQFieldMode(protoField, BQField);
+        protoFieldTypeIsCompatibleWithBQFieldType(protoField, BQField);
         matchedFields++;
       }
 
       if (matchedFields == 0 && topLevel) {
         throw new IllegalArgumentException ("There is no matching fields found for the proto schema " +
                                          protoSchema.getName() +
-                                         " and the table schema " +
-                                         BQSchema);
+                                         " and the BQ table schema");
       }
+
       return true;
   }
 
