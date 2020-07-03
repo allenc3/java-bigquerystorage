@@ -26,6 +26,13 @@ import java.util.Map;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.json.JSONArray;
+import org.json.JSONException;
+import org.json.JSONObject;
+import com.google.protobuf.DynamicMessage;
+import com.google.protobuf.Message;
+import java.util.Arrays;
+import java.util.List;
 
 @RunWith(JUnit4.class)
 public class JsonToProtoConverterTest {
@@ -45,6 +52,13 @@ public class JsonToProtoConverterTest {
               .put(Table.TableFieldSchema.Type.TIMESTAMP, Int64Type.getDescriptor())
               .build();
 
+  private static JSONObject[] simpleJSONObjects = {
+    new JSONObject().put("test_field_type", 21474836470L),
+    new JSONObject().put("test_field_type", 1.23),
+    new JSONObject().put("test_field_type", true),
+    new JSONObject().put("test_field_type", "test")
+  };
+
   private boolean isDescriptorEqual(Descriptor convertedProto, Descriptor originalProto) {
     for (FieldDescriptor convertedField : convertedProto.getFields()) {
       FieldDescriptor originalField = originalProto.findFieldByName(convertedField.getName());
@@ -63,6 +77,100 @@ public class JsonToProtoConverterTest {
       }
     }
     return true;
+  }
+
+  private boolean isProtoJsonEqual(DynamicMessage proto, JSONObject json) {
+    for (Map.Entry<FieldDescriptor, java.lang.Object> entry : proto.getAllFields().entrySet()) {
+      FieldDescriptor key = entry.getKey();
+      java.lang.Object value = entry.getValue();
+      if (key.isRepeated()) {
+        if (!isProtoArrayJsonArrayEqual(key, value, json)) {
+          return false;
+        }
+      } else {
+        if (!isProtoFieldJsonFieldEqual(key, value, json)) {
+          return false;
+        }
+      }
+    }
+    return true;
+  }
+
+  private boolean isProtoFieldJsonFieldEqual(
+      FieldDescriptor key, java.lang.Object value, JSONObject json) {
+    String fieldName = key.getName();
+    switch (key.getType()) {
+      case BOOL:
+        return (Boolean) value == json.getBoolean(fieldName);
+      case BYTES:
+        return Arrays.equals((byte[]) value, json.getString(fieldName).getBytes());
+      case INT64:
+        return (long) value == json.getLong(fieldName);
+      case STRING:
+        return ((String) value).equals(json.getString(fieldName));
+      case DOUBLE:
+        return (double) value == json.getDouble(fieldName);
+      case MESSAGE:
+        return isProtoJsonEqual((DynamicMessage) value, json.getJSONObject(fieldName));
+    }
+    return false;
+  }
+
+  private boolean isProtoArrayJsonArrayEqual(
+      FieldDescriptor key, java.lang.Object value, JSONObject json) {
+    String fieldName = key.getName();
+    JSONArray jsonArray = json.getJSONArray(fieldName);
+    switch (key.getType()) {
+      case BOOL:
+        List<Boolean> boolArr = (List<Boolean>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!(boolArr.get(i) == jsonArray.getBoolean(i))) {
+            return false;
+          }
+        }
+        return true;
+      case BYTES:
+        List<byte[]> byteArr = (List<byte[]>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!Arrays.equals(byteArr.get(i), jsonArray.getString(i).getBytes())) {
+            return false;
+          }
+        }
+        return true;
+      case INT64:
+        List<Long> longArr = (List<Long>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!(longArr.get(i) == jsonArray.getLong(i))) {
+            return false;
+          }
+        }
+        return true;
+      case STRING:
+        List<String> stringArr = (List<String>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!stringArr.get(i).equals(jsonArray.getString(i))) {
+            return false;
+          }
+        }
+        return true;
+      case DOUBLE:
+        List<Double> doubleArr = (List<Double>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!(doubleArr.get(i) == jsonArray.getDouble(i))) {
+            return false;
+          }
+        }
+        return true;
+      case MESSAGE:
+        List<DynamicMessage> messageArr = (List<DynamicMessage>) value;
+        for (int i = 0; i < jsonArray.length(); i++) {
+          if (!isProtoJsonEqual(messageArr.get(i), jsonArray.getJSONObject(i))) {
+            return false;
+          }
+        }
+        return true;
+    }
+    return false;
   }
 
   @Test
@@ -101,5 +209,28 @@ public class JsonToProtoConverterTest {
         Table.TableSchema.newBuilder().addFields(0, tableFieldSchema).build();
     Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
     assertTrue(isDescriptorEqual(descriptor, MessageType.getDescriptor()));
+  }
+
+  @Test
+  public void testBQSchemaToProtobufferBoolean() throws Exception {
+    Table.TableFieldSchema tableFieldSchema =
+        Table.TableFieldSchema.newBuilder()
+            .setType(Table.TableFieldSchema.Type.BOOL)
+            .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+            .setName("test_field_type")
+            .build();
+    Table.TableSchema tableSchema =
+        Table.TableSchema.newBuilder().addFields(0, tableFieldSchema).build();
+    int success = 0;
+    for (JSONObject json : simpleJSONObjects) {
+      try {
+        Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
+        DynamicMessage protoMsg = JsonToProtoConverter.protoSchemaToProtoMessage(descriptor, json);
+        success += 1;
+      } catch (IllegalArgumentException e) {
+        assertEquals(
+            e.getMessage(), "JSONObject does not have the boolean field .test_field_type.");
+      }
+    }
   }
 }
