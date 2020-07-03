@@ -51,13 +51,44 @@ public class JsonToProtoConverterTest {
               .put(Table.TableFieldSchema.Type.TIME, Int64Type.getDescriptor())
               .put(Table.TableFieldSchema.Type.TIMESTAMP, Int64Type.getDescriptor())
               .build();
+  private static ImmutableMap<Table.TableFieldSchema.Type, String>
+      BQTableTypeToDebugMessage =
+          new ImmutableMap.Builder<Table.TableFieldSchema.Type, String>()
+              .put(Table.TableFieldSchema.Type.BOOL, "boolean")
+              .put(Table.TableFieldSchema.Type.BYTES, "string")
+              .put(Table.TableFieldSchema.Type.DATE, "int64")
+              .put(Table.TableFieldSchema.Type.DATETIME, "int64")
+              .put(Table.TableFieldSchema.Type.DOUBLE, "double")
+              .put(Table.TableFieldSchema.Type.GEOGRAPHY, "string")
+              .put(Table.TableFieldSchema.Type.INT64, "int64")
+              .put(Table.TableFieldSchema.Type.NUMERIC, "string")
+              .put(Table.TableFieldSchema.Type.STRING, "string")
+              .put(Table.TableFieldSchema.Type.TIME, "int64")
+              .put(Table.TableFieldSchema.Type.TIMESTAMP, "int64")
+              .build();
 
   private static JSONObject[] simpleJSONObjects = {
-    new JSONObject().put("test_field_type", 21474836470L),
+    new JSONObject().put("test_field_type", 9223372036854775807L),
     new JSONObject().put("test_field_type", 1.23),
     new JSONObject().put("test_field_type", true),
     new JSONObject().put("test_field_type", "test")
   };
+
+  private static ImmutableMap<Table.TableFieldSchema.Type, Integer>
+      TableFieldTypeToAccepted =
+          new ImmutableMap.Builder<Table.TableFieldSchema.Type, Integer>()
+              .put(Table.TableFieldSchema.Type.BOOL, 1)
+              .put(Table.TableFieldSchema.Type.BYTES, 1)
+              .put(Table.TableFieldSchema.Type.DATE, 1)
+              .put(Table.TableFieldSchema.Type.DATETIME, 1)
+              .put(Table.TableFieldSchema.Type.DOUBLE, 1)
+              .put(Table.TableFieldSchema.Type.GEOGRAPHY, 1)
+              .put(Table.TableFieldSchema.Type.INT64, 1)
+              .put(Table.TableFieldSchema.Type.NUMERIC, 1)
+              .put(Table.TableFieldSchema.Type.STRING, 1)
+              .put(Table.TableFieldSchema.Type.TIME, 1)
+              .put(Table.TableFieldSchema.Type.TIMESTAMP, 1)
+              .build();
 
   private boolean isDescriptorEqual(Descriptor convertedProto, Descriptor originalProto) {
     for (FieldDescriptor convertedField : convertedProto.getFields()) {
@@ -212,25 +243,100 @@ public class JsonToProtoConverterTest {
   }
 
   @Test
-  public void testBQSchemaToProtobufferBoolean() throws Exception {
-    Table.TableFieldSchema tableFieldSchema =
-        Table.TableFieldSchema.newBuilder()
-            .setType(Table.TableFieldSchema.Type.BOOL)
-            .setMode(Table.TableFieldSchema.Mode.NULLABLE)
-            .setName("test_field_type")
-            .build();
-    Table.TableSchema tableSchema =
-        Table.TableSchema.newBuilder().addFields(0, tableFieldSchema).build();
-    int success = 0;
-    for (JSONObject json : simpleJSONObjects) {
-      try {
-        Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
-        DynamicMessage protoMsg = JsonToProtoConverter.protoSchemaToProtoMessage(descriptor, json);
-        success += 1;
-      } catch (IllegalArgumentException e) {
-        assertEquals(
-            e.getMessage(), "JSONObject does not have the boolean field .test_field_type.");
+  public void testProtoSchemaToProtobufferSimpleTypes() throws Exception {
+    for (Map.Entry<Table.TableFieldSchema.Type, Integer> entry :
+        TableFieldTypeToAccepted.entrySet()) {
+      Table.TableFieldSchema tableFieldSchema =
+          Table.TableFieldSchema.newBuilder()
+              .setType(entry.getKey())
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("test_field_type")
+              .build();
+      Table.TableSchema tableSchema =
+          Table.TableSchema.newBuilder().addFields(0, tableFieldSchema).build();
+      int success = 0;
+      for (JSONObject json : simpleJSONObjects) {
+        try {
+          Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
+          DynamicMessage protoMsg = JsonToProtoConverter.protoSchemaToProtoMessage(descriptor, json);
+          success += 1;
+        } catch (IllegalArgumentException e) {
+          assertEquals(
+              e.getMessage(), "JSONObject does not have the " + BQTableTypeToDebugMessage.get(entry.getKey()) + " field .test_field_type.");
+        }
       }
+      assertEquals((int)entry.getValue(), success);
     }
   }
+
+    @Test
+    public void testBQSchemaToProtobufferRecordComplex() throws Exception {
+      Table.TableFieldSchema bqBytes =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.BYTES)
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("bytes")
+              .build();
+      Table.TableFieldSchema bqInt =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.INT64)
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("int")
+              .build();
+      Table.TableFieldSchema record1 =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.STRUCT)
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("record1")
+              .addFields(0, bqInt)
+              .build();
+      Table.TableFieldSchema record =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.STRUCT)
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("record")
+              .addFields(0, bqInt)
+              .addFields(1, bqBytes)
+              .addFields(2, record1)
+              .build();
+      Table.TableFieldSchema bqDouble =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.DOUBLE)
+              .setMode(Table.TableFieldSchema.Mode.NULLABLE)
+              .setName("float")
+              .build();
+      Table.TableSchema tableSchema =
+          Table.TableSchema.newBuilder().addFields(0, record).addFields(1, bqDouble).build();
+
+      JSONObject jsonRecord1 = new JSONObject();
+      jsonRecord1.put("int", 2048);
+      JSONObject jsonRecord = new JSONObject();
+      jsonRecord.put("int", 1024);
+      jsonRecord.put("bytes", "testing");
+      jsonRecord.put("record1", jsonRecord1);
+      JSONObject json = new JSONObject();
+      json.put("record", jsonRecord);
+      json.put("float", 1.23);
+
+      Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
+      DynamicMessage protoMsg = JsonToProtoConverter.protoSchemaToProtoMessage(descriptor, json);
+      assertTrue(isProtoJsonEqual(protoMsg, json));
+    }
+
+    @Test
+    public void testBQRecordJsonRepeatedSimple() throws Exception {
+      Table.TableFieldSchema bqDouble =
+          Table.TableFieldSchema.newBuilder()
+              .setType(Table.TableFieldSchema.Type.DOUBLE)
+              .setMode(Table.TableFieldSchema.Mode.REPEATED)
+              .setName("float")
+              .build();
+      Table.TableSchema tableSchema = Table.TableSchema.newBuilder().addFields(0, bqDouble).build();
+      JSONObject json = new JSONObject();
+      double[] doubleArr = {1.1, 2.2, 3.3, 4.4, 5.5};
+      json.put("float", new JSONArray(doubleArr));
+      Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
+      DynamicMessage protoMsg = JsonToProtoConverter.protoSchemaToProtoMessage(descriptor, json);
+      assertTrue(isProtoJsonEqual(protoMsg, json));
+    }
 }

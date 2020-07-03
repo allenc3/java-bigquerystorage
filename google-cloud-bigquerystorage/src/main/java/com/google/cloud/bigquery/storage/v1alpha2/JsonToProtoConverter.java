@@ -295,7 +295,15 @@ public class JsonToProtoConverter {
         break;
       case DOUBLE:
         try {
-          protoMsg.setField(field, new Double(json.getDouble(fieldName)));
+          java.lang.Object val = json.get(fieldName);
+          if (val instanceof Double) {
+            protoMsg.setField(field, new Double((double) val));
+          } else if (val instanceof Float) {
+            protoMsg.setField(field, new Double((double) val));
+          } else {
+            throw new IllegalArgumentException(
+                "JSONObject does not have the double field " + currentScope + ".");
+          }
         } catch (JSONException e) {
           throw new IllegalArgumentException(
               "JSONObject does not have the double field " + currentScope + ".");
