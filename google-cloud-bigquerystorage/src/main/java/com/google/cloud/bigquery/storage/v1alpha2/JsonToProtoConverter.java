@@ -172,6 +172,7 @@ public class JsonToProtoConverter {
    *
    * @param protoSchema
    * @param json
+   * @param allowUnknownFields Ignores unknown JSON fields.
    * @throws IllegalArgumentException when JSON data is not compatible with proto descriptor.
    */
   public static DynamicMessage protoSchemaToProtoMessage(
@@ -258,7 +259,7 @@ public class JsonToProtoConverter {
           protoMsg.setField(field, new Boolean(json.getBoolean(fieldName)));
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the boolean field " + currentScope + ".");
+              "JSONObject does not have a boolean field at " + currentScope + ".");
         }
         break;
       case BYTES:
@@ -266,7 +267,7 @@ public class JsonToProtoConverter {
           protoMsg.setField(field, json.getString(fieldName).getBytes());
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the string field " + currentScope + ".");
+              "JSONObject does not have a string field at " + currentScope + ".");
         }
         break;
       case INT64:
@@ -278,11 +279,11 @@ public class JsonToProtoConverter {
             protoMsg.setField(field, new Long((Long) val));
           } else {
             throw new IllegalArgumentException(
-                "JSONObject does not have the int64 field " + currentScope + ".");
+                "JSONObject does not have a int64 field at " + currentScope + ".");
           }
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the int64 field " + currentScope + ".");
+              "JSONObject does not have a int64 field at " + currentScope + ".");
         }
         break;
       case STRING:
@@ -290,7 +291,7 @@ public class JsonToProtoConverter {
           protoMsg.setField(field, json.getString(fieldName));
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the string field " + currentScope + ".");
+              "JSONObject does not have a string field at " + currentScope + ".");
         }
         break;
       case DOUBLE:
@@ -299,14 +300,14 @@ public class JsonToProtoConverter {
           if (val instanceof Double) {
             protoMsg.setField(field, new Double((double) val));
           } else if (val instanceof Float) {
-            protoMsg.setField(field, new Double((double) val));
+            protoMsg.setField(field, new Double((float) val));
           } else {
             throw new IllegalArgumentException(
-                "JSONObject does not have the double field " + currentScope + ".");
+                "JSONObject does not have a double field at " + currentScope + ".");
           }
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the double field " + currentScope + ".");
+              "JSONObject does not have a double field at " + currentScope + ".");
         }
         break;
       case MESSAGE:
@@ -322,7 +323,7 @@ public class JsonToProtoConverter {
                   allowUnknownFields));
         } catch (JSONException e) {
           throw new IllegalArgumentException(
-              "JSONObject does not have the object field " + currentScope + ".");
+              "JSONObject does not have an object field at " + currentScope + ".");
         }
         break;
     }
@@ -351,7 +352,7 @@ public class JsonToProtoConverter {
       jsonArray = json.getJSONArray(fieldName);
     } catch (JSONException e) {
       throw new IllegalArgumentException(
-          "JSONObject does not have the array field " + currentScope + ".");
+          "JSONObject does not have an array field at " + currentScope + ".");
     }
 
     switch (field.getType()) {
@@ -361,7 +362,12 @@ public class JsonToProtoConverter {
             protoMsg.addRepeatedField(field, new Boolean(jsonArray.getBoolean(i)));
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the boolean field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have a boolean field at "
+                    + currentScope
+                    + "["
+                    + i
+                    + "]"
+                    + ".");
           }
         }
         break;
@@ -371,25 +377,30 @@ public class JsonToProtoConverter {
             protoMsg.addRepeatedField(field, jsonArray.getString(i).getBytes());
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the string field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have a string field at " + currentScope + "[" + i + "]" + ".");
           }
         }
         break;
       case INT64:
         for (int i = 0; i < jsonArray.length(); i++) {
           try {
-            java.lang.Object val = json.get(fieldName);
+            java.lang.Object val = jsonArray.get(i);
             if (val instanceof Integer) {
-              protoMsg.setField(field, new Long((Integer) val));
+              protoMsg.addRepeatedField(field, new Long((Integer) val));
             } else if (val instanceof Long) {
-              protoMsg.setField(field, new Long((Long) val));
+              protoMsg.addRepeatedField(field, new Long((Long) val));
             } else {
               throw new IllegalArgumentException(
-                  "JSONObject does not have the int64 field " + currentScope + "[" + i + "]" + ".");
+                  "JSONObject does not have a int64 field at "
+                      + currentScope
+                      + "["
+                      + i
+                      + "]"
+                      + ".");
             }
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the int64 field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have a int64 field at " + currentScope + "[" + i + "]" + ".");
           }
         }
         break;
@@ -399,17 +410,30 @@ public class JsonToProtoConverter {
             protoMsg.addRepeatedField(field, jsonArray.getString(i));
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the string field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have a string field at " + currentScope + "[" + i + "]" + ".");
           }
         }
         break;
       case DOUBLE:
         for (int i = 0; i < jsonArray.length(); i++) {
           try {
-            protoMsg.addRepeatedField(field, new Double(jsonArray.getDouble(i)));
+            java.lang.Object val = jsonArray.get(i);
+            if (val instanceof Double) {
+              protoMsg.addRepeatedField(field, new Double((double) val));
+            } else if (val instanceof Float) {
+              protoMsg.addRepeatedField(field, new Double((float) val));
+            } else {
+              throw new IllegalArgumentException(
+                  "JSONObject does not have a double field at "
+                      + currentScope
+                      + "["
+                      + i
+                      + "]"
+                      + ".");
+            }
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the double field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have a double field at " + currentScope + "[" + i + "]" + ".");
           }
         }
         break;
@@ -427,7 +451,12 @@ public class JsonToProtoConverter {
                     allowUnknownFields));
           } catch (JSONException e) {
             throw new IllegalArgumentException(
-                "JSONObject does not have the object field " + currentScope + "[" + i + "]" + ".");
+                "JSONObject does not have an object field at "
+                    + currentScope
+                    + "["
+                    + i
+                    + "]"
+                    + ".");
           }
         }
         break;
