@@ -273,7 +273,11 @@ public class JsonToProtoConverter {
       case INT64:
         try {
           java.lang.Object val = json.get(fieldName);
-          if (val instanceof Integer) {
+          if (val instanceof Byte) {
+            protoMsg.setField(field, new Long((Byte) val));
+          } else if (val instanceof Short) {
+            protoMsg.setField(field, new Long((Short) val));
+          } else if (val instanceof Integer) {
             protoMsg.setField(field, new Long((Integer) val));
           } else if (val instanceof Long) {
             protoMsg.setField(field, new Long((Long) val));
@@ -385,7 +389,11 @@ public class JsonToProtoConverter {
         for (int i = 0; i < jsonArray.length(); i++) {
           try {
             java.lang.Object val = jsonArray.get(i);
-            if (val instanceof Integer) {
+            if (val instanceof Byte) {
+              protoMsg.addRepeatedField(field, new Long((Byte) val));
+            } else if (val instanceof Short) {
+              protoMsg.addRepeatedField(field, new Long((Short) val));
+            } else if (val instanceof Integer) {
               protoMsg.addRepeatedField(field, new Long((Integer) val));
             } else if (val instanceof Long) {
               protoMsg.addRepeatedField(field, new Long((Long) val));

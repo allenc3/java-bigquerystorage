@@ -461,6 +461,18 @@ public class JsonToProtoConverterTest {
 
   @Test
   public void testBQSchemaToProtobufferRepeatedSimpleInt64() throws Exception {
+    Table.TableFieldSchema bqByte =
+        Table.TableFieldSchema.newBuilder()
+            .setType(Table.TableFieldSchema.Type.INT64)
+            .setMode(Table.TableFieldSchema.Mode.REPEATED)
+            .setName("byte")
+            .build();
+    Table.TableFieldSchema bqShort =
+        Table.TableFieldSchema.newBuilder()
+            .setType(Table.TableFieldSchema.Type.INT64)
+            .setMode(Table.TableFieldSchema.Mode.REPEATED)
+            .setName("short")
+            .build();
     Table.TableFieldSchema bqInt =
         Table.TableFieldSchema.newBuilder()
             .setType(Table.TableFieldSchema.Type.INT64)
@@ -474,10 +486,19 @@ public class JsonToProtoConverterTest {
             .setName("long")
             .build();
     Table.TableSchema tableSchema =
-        Table.TableSchema.newBuilder().addFields(0, bqInt).addFields(1, bqLong).build();
+        Table.TableSchema.newBuilder()
+            .addFields(0, bqByte)
+            .addFields(1, bqShort)
+            .addFields(2, bqInt)
+            .addFields(3, bqLong)
+            .build();
     JSONObject json = new JSONObject();
+    byte[] byteArr = {(byte) 1, (byte) 2};
+    short[] shortArr = {(short) 1, (short) 2};
     int[] intArr = {1, 2, 3, 4, 5};
     long[] longArr = {1L, 2L, 3L, 4L, 5L};
+    json.put("byte", new JSONArray(byteArr));
+    json.put("short", new JSONArray(shortArr));
     json.put("int", new JSONArray(intArr));
     json.put("long", new JSONArray(longArr));
     Descriptor descriptor = JsonToProtoConverter.BQTableSchemaToProtoSchema(tableSchema);
